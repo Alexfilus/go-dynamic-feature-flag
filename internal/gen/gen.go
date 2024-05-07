@@ -16,7 +16,12 @@ func Gen(cfg model.Config) error {
 	if err != nil {
 		return err
 	}
-	outputPath := dir + "/../../" + cfg.PkgPath + "/" + cfg.OutputFile
+	outputDir := dir + "/../../" + cfg.PkgPath
+	outputPath := outputDir + "/" + cfg.OutputFile
+	err = os.MkdirAll(outputDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return err
