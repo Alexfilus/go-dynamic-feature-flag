@@ -1,0 +1,16 @@
+project_name: test-project
+pkg_path: internal/test
+pkg_name: test
+output_file: test_cfg.go
+string_vars:
+  test_str1: test1
+  test_str2: test2
+duration_vars:
+  test_duration1: 1s
+  test_duration2: 2m
+int_vars:
+  test_int1: 1
+  test_int2: 2
+bool_vars:
+    test_bool1: true
+    test_bool2: false
