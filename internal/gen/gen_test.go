@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"go-dynamic-feature-flag/internal/model"
+	"github.com/alexfilus/go-dynamic-feature-flag/internal/model"
 )
 
 func TestGen(t *testing.T) {

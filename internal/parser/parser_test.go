@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go-dynamic-feature-flag/internal/model"
+	"github.com/alexfilus/go-dynamic-feature-flag/internal/model"
 )
 
 func Test_Parse(t *testing.T) {

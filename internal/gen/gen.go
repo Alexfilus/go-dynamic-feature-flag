@@ -5,10 +5,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	
+
 	"github.com/iancoleman/strcase"
-	
-	"go-dynamic-feature-flag/internal/model"
+
+	"github.com/alexfilus/go-dynamic-feature-flag/internal/model"
 )
 
 func Gen(cfg model.Config) error {
@@ -32,7 +32,7 @@ func Gen(cfg model.Config) error {
 			log.Fatalln(err)
 		}
 	}()
-	
+
 	b := strings.Builder{}
 	b.WriteString("package " + cfg.PkgName + "\n\n")
 	b.WriteString("import (\n")
@@ -42,49 +42,49 @@ func Gen(cfg model.Config) error {
 	}
 	b.WriteString("\n\t\"github.com/redis/rueidis\"\n")
 	b.WriteString(")\n\n")
-	
+
 	b.WriteString("type DynamicConfig struct {\n")
-	
+
 	b.WriteString("\tclient rueidis.Client\n")
-	
+
 	for k := range cfg.StringVars {
 		b.WriteString("\t" + strcase.ToLowerCamel(k) + " string\n")
 	}
-	
+
 	for k := range cfg.DurationVars {
 		b.WriteString("\t" + strcase.ToLowerCamel(k) + " time.Duration\n")
 	}
-	
+
 	for k := range cfg.IntVars {
 		b.WriteString("\t" + strcase.ToLowerCamel(k) + " int\n")
 	}
-	
+
 	for k := range cfg.BoolVars {
 		b.WriteString("\t" + strcase.ToLowerCamel(k) + " bool\n")
 	}
-	
+
 	b.WriteString("}\n\n")
-	
+
 	b.WriteString("func NewDynamicConfig(client rueidis.Client) *DynamicConfig {\n\treturn &DynamicConfig{\n")
 	b.WriteString("\t\tclient: client,\n")
 	for k, v := range cfg.StringVars {
 		b.WriteString("\t\t" + strcase.ToLowerCamel(k) + ": \"" + v + "\",\n")
 	}
-	
+
 	for k, v := range cfg.DurationVars {
 		b.WriteString("\t\t" + strcase.ToLowerCamel(k) + ": " + strconv.FormatInt(v.Milliseconds(), 10) + " * time.Millisecond,\n")
 	}
-	
+
 	for k, v := range cfg.IntVars {
 		b.WriteString("\t\t" + strcase.ToLowerCamel(k) + ": " + strconv.Itoa(v) + ",\n")
 	}
-	
+
 	for k, v := range cfg.BoolVars {
 		b.WriteString("\t\t" + strcase.ToLowerCamel(k) + ": " + strconv.FormatBool(v) + ",\n")
 	}
-	
+
 	b.WriteString("\t}\n}\n")
-	
+
 	for k := range cfg.StringVars {
 		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) string {\n\t")
 		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
@@ -93,7 +93,7 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\tc." + strcase.ToLowerCamel(k) + " = resp\n")
 		b.WriteString("\treturn resp\n}\n")
 	}
-	
+
 	for k := range cfg.DurationVars {
 		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) time.Duration {\n\t")
 		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
@@ -102,7 +102,7 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\tc." + strcase.ToLowerCamel(k) + ", _ = time.ParseDuration(resp)\n")
 		b.WriteString("\treturn c." + strcase.ToLowerCamel(k) + "\n}\n")
 	}
-	
+
 	for k := range cfg.IntVars {
 		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) int {\n\t")
 		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
@@ -111,7 +111,7 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\tc." + strcase.ToLowerCamel(k) + " = int(resp)\n")
 		b.WriteString("\treturn c." + strcase.ToLowerCamel(k) + "\n}\n")
 	}
-	
+
 	for k := range cfg.BoolVars {
 		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) bool {\n\t")
 		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
@@ -120,8 +120,8 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\tc." + strcase.ToLowerCamel(k) + " = resp\n")
 		b.WriteString("\treturn c." + strcase.ToLowerCamel(k) + "\n}\n")
 	}
-	
+
 	_, err = f.WriteString(b.String())
-	
+
 	return err
 }

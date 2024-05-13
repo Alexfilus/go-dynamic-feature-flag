@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"go-dynamic-feature-flag/internal/gen"
-	"go-dynamic-feature-flag/internal/parser"
+	"github.com/alexfilus/go-dynamic-feature-flag/internal/gen"
+	"github.com/alexfilus/go-dynamic-feature-flag/internal/parser"
 )
 
 var cfgPath = flag.String("cfg_path", "", "path to config yaml file")

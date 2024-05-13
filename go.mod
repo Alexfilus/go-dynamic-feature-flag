@@ -1,10 +1,10 @@
-module go-dynamic-feature-flag
+module github.com/alexfilus/go-dynamic-feature-flag
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/iancoleman/strcase v0.3.0
-	github.com/redis/rueidis v1.0.36
+	github.com/redis/rueidis v1.0.37
 	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
