@@ -37,6 +37,9 @@ func Gen(cfg model.Config) error {
 	b.WriteString("package " + cfg.PkgName + "\n\n")
 	b.WriteString("import (\n")
 	b.WriteString("\t\"context\"\n")
+	if len(cfg.IntVars) > 0 || len(cfg.BoolVars) > 0 {
+		b.WriteString("\t\"strconv\"\n")
+	}
 	if len(cfg.DurationVars) > 0 {
 		b.WriteString("\t\"time\"\n")
 	}
@@ -65,6 +68,40 @@ func Gen(cfg model.Config) error {
 
 	b.WriteString("}\n\n")
 
+	b.WriteString("const (\n")
+	for k := range cfg.StringVars {
+		b.WriteString("\t")
+		b.WriteString(cfg.ToConstStr(k))
+		b.WriteString(" = \"")
+		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString("\"\n")
+	}
+
+	for k := range cfg.DurationVars {
+		b.WriteString("\t")
+		b.WriteString(cfg.ToConstDuration(k))
+		b.WriteString(" = \"")
+		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString("\"\n")
+	}
+
+	for k := range cfg.IntVars {
+		b.WriteString("\t")
+		b.WriteString(cfg.ToConstInt(k))
+		b.WriteString(" = \"")
+		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString("\"\n")
+	}
+
+	for k := range cfg.BoolVars {
+		b.WriteString("\t")
+		b.WriteString(cfg.ToConstBool(k))
+		b.WriteString(" = \"")
+		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString("\"\n")
+	}
+	b.WriteString(")\n\n")
+
 	b.WriteString("func NewDynamicConfig(client rueidis.Client) *DynamicConfig {\n\treturn &DynamicConfig{\n")
 	b.WriteString("\t\tclient: client,\n")
 	for k, v := range cfg.StringVars {
@@ -86,39 +123,71 @@ func Gen(cfg model.Config) error {
 	b.WriteString("\t}\n}\n")
 
 	for k := range cfg.StringVars {
-		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) string {\n\t")
-		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
-		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(\"" + key + "\").Cache(),\n\t\ttime.Minute,\n\t).ToString()\n\n")
-		b.WriteString("\tif err != nil {\n\t\treturn c." + strcase.ToLowerCamel(k) + "\n\t}\n\n")
-		b.WriteString("\tc." + strcase.ToLowerCamel(k) + " = resp\n")
+		key := cfg.ToConstStr(k)
+		fieldName := strcase.ToLowerCamel(k)
+		title := strcase.ToCamel(k)
+		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) string {\n\t")
+		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).ToString()\n\n")
+		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("\tc." + fieldName + " = resp\n")
 		b.WriteString("\treturn resp\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value string) *DynamicConfig {\n\t")
+		b.WriteString("c." + fieldName + " = value\n\treturn c\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Store" + title + "(ctx context.Context, value string) error {\n\t")
+		b.WriteString("return c.client.Do(\n\t\tctx, \n\t\tc.client.B().Set().Key(" + key + ").\n\t\t\tValue(value).\n\t\t\tBuild()).\n\t\tError()\n}\n")
 	}
 
 	for k := range cfg.DurationVars {
-		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) time.Duration {\n\t")
-		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
-		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(\"" + key + "\").Cache(),\n\t\ttime.Minute,\n\t).ToString()\n\n")
-		b.WriteString("\tif err != nil {\n\t\treturn c." + strcase.ToLowerCamel(k) + "\n\t}\n\n")
-		b.WriteString("\tc." + strcase.ToLowerCamel(k) + ", _ = time.ParseDuration(resp)\n")
-		b.WriteString("\treturn c." + strcase.ToLowerCamel(k) + "\n}\n")
+		key := cfg.ToConstDuration(k)
+		fieldName := strcase.ToLowerCamel(k)
+		title := strcase.ToCamel(k)
+		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) time.Duration {\n\t")
+		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).AsInt64()\n\n")
+		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("\tc." + fieldName + " = time.Duration(resp) * time.Millisecond\n")
+		b.WriteString("\treturn c." + fieldName + "\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value time.Duration) *DynamicConfig {\n\t")
+		b.WriteString("c." + fieldName + " = value\n\treturn c\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Store" + title + "(ctx context.Context, value time.Duration) error {\n\t")
+		b.WriteString("return c.client.Do(\n\t\tctx, \n\t\tc.client.B().Set().Key(" + key + ").\n\t\t\tValue(strconv.FormatInt(value.Milliseconds(), 10)).\n\t\t\tBuild()).\n\t\t\tError()\n}\n")
 	}
 
 	for k := range cfg.IntVars {
-		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) int {\n\t")
-		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
-		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(\"" + key + "\").Cache(),\n\t\ttime.Minute,\n\t).ToInt64()\n\n")
-		b.WriteString("\tif err != nil {\n\t\treturn c." + strcase.ToLowerCamel(k) + "\n\t}\n\n")
-		b.WriteString("\tc." + strcase.ToLowerCamel(k) + " = int(resp)\n")
-		b.WriteString("\treturn c." + strcase.ToLowerCamel(k) + "\n}\n")
+		key := cfg.ToConstInt(k)
+		fieldName := strcase.ToLowerCamel(k)
+		title := strcase.ToCamel(k)
+		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) int {\n\t")
+		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).AsInt64()\n\n")
+		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("\tc." + fieldName + " = int(resp)\n")
+		b.WriteString("\treturn c." + fieldName + "\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value int) *DynamicConfig {\n\t")
+		b.WriteString("c." + fieldName + " = value\n\treturn c\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Store" + title + "(ctx context.Context, value int) error {\n\t")
+		b.WriteString("return c.client.Do(\n\t\tctx, \n\t\tc.client.B().Set().Key(" + key + ").\n\t\t\tValue(strconv.Itoa(value)).\n\t\t\tBuild()).\n\t\tError()\n}\n")
 	}
 
 	for k := range cfg.BoolVars {
-		b.WriteString("\nfunc (c *DynamicConfig) " + strcase.ToCamel(k) + "(ctx context.Context) bool {\n\t")
-		key := cfg.ProjectName + ":" + cfg.PkgName + ":" + strcase.ToLowerCamel(k)
-		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(\"" + key + "\").Cache(),\n\t\ttime.Minute,\n\t).ToBool()\n\n")
-		b.WriteString("\tif err != nil {\n\t\treturn c." + strcase.ToLowerCamel(k) + "\n\t}\n\n")
-		b.WriteString("\tc." + strcase.ToLowerCamel(k) + " = resp\n")
-		b.WriteString("\treturn c." + strcase.ToLowerCamel(k) + "\n}\n")
+		key := cfg.ToConstBool(k)
+		fieldName := strcase.ToLowerCamel(k)
+		title := strcase.ToCamel(k)
+		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) bool {\n\t")
+		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).AsBool()\n\n")
+		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("\tc." + fieldName + " = resp\n")
+		b.WriteString("\treturn resp\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value bool) *DynamicConfig {\n\t")
+		b.WriteString("c." + fieldName + " = value\n\treturn c\n}\n")
+
+		b.WriteString("\nfunc (c *DynamicConfig) Store" + title + "(ctx context.Context, value bool) error {\n\t")
+		b.WriteString("return c.client.Do(\n\t\tctx, \n\t\tc.client.B().Set().Key(" + key + ").\n\t\t\tValue(strconv.FormatBool(value)).\n\t\t\tBuild()).\n\t\tError()\n}\n")
 	}
 
 	_, err = f.WriteString(b.String())
