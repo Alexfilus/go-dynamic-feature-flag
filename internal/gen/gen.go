@@ -16,7 +16,7 @@ func Gen(cfg model.Config) error {
 	if err != nil {
 		return err
 	}
-	outputDir := dir + "/../../" + cfg.PkgPath
+	outputDir := dir + "/" + cfg.PkgPath
 	outputPath := outputDir + "/" + cfg.OutputFile
 	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
@@ -26,6 +26,7 @@ func Gen(cfg model.Config) error {
 	if err != nil {
 		return err
 	}
+	log.Println("Generated file: " + outputPath)
 	defer func() {
 		err := f.Close()
 		if err != nil {
