@@ -48,16 +48,19 @@ func TestNewDynamicConfig(t *testing.T) {
 	testBool2 := cfg.TestBool2(ctx)
 	r.False(testBool2)
 
-	err = redisClient.Do(
-		ctx,
-		redisClient.B().Set().
-			Key("test-project:test:testBool1").
-			Value("false").Build(),
-	).Error()
+	err = cfg.StoreTestBool1(ctx, false)
 	r.NoError(err)
 
 	time.Sleep(time.Millisecond)
 
 	testBool1 = cfg.TestBool1(ctx)
 	r.False(testBool1)
+
+	err = cfg.StoreTestBool1(ctx, true)
+	r.NoError(err)
+
+	time.Sleep(time.Millisecond)
+
+	testBool1 = cfg.TestBool1(ctx)
+	r.True(testBool1)
 }

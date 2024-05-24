@@ -44,6 +44,53 @@ func TestGen(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Testcase 2",
+			args: args{
+				cfg: model.Config{
+					ProjectName: "mega-pay-master",
+					PkgPath:     "internal/api/rest",
+					PkgName:     "rest",
+					OutputFile:  "server_cfg.go",
+					BoolVars: map[string]bool{
+						"wbxCheckRids":   true,
+						"forceDiscount":  false,
+						"enableDiscount": true,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Testcase 3",
+			args: args{
+				cfg: model.Config{
+					ProjectName: "mega-pay-master",
+					PkgPath:     "internal/service/position",
+					PkgName:     "position",
+					OutputFile:  "service_cfg.go",
+					BoolVars: map[string]bool{
+						"forceSkipCB": false,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Testcase 4",
+			args: args{
+				cfg: model.Config{
+					ProjectName: "mega-pay-master",
+					PkgPath:     "internal/featurebalancer",
+					PkgName:     "featurebalancer",
+					OutputFile:  "balancer_cfg.go",
+					IntVars: map[string]int{
+						"sbpWalletPercent": 0,
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

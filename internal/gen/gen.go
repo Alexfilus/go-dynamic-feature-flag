@@ -40,9 +40,7 @@ func Gen(cfg model.Config) error {
 	if len(cfg.IntVars) > 0 || len(cfg.BoolVars) > 0 {
 		b.WriteString("\t\"strconv\"\n")
 	}
-	if len(cfg.DurationVars) > 0 {
-		b.WriteString("\t\"time\"\n")
-	}
+	b.WriteString("\t\"time\"\n")
 	b.WriteString("\n\t\"github.com/redis/rueidis\"\n")
 	b.WriteString(")\n\n")
 
@@ -68,12 +66,32 @@ func Gen(cfg model.Config) error {
 
 	b.WriteString("}\n\n")
 
+	b.WriteString("type RequestDynamicConfigUpdate struct {\n")
+
+	for k := range cfg.StringVars {
+		b.WriteString("\t" + strcase.ToCamel(k) + " *string `json:\"" + k + ",omitempty\"`\n")
+	}
+
+	for k := range cfg.DurationVars {
+		b.WriteString("\t" + strcase.ToCamel(k) + " *time.Duration `json:\"" + k + ",omitempty\"`\n")
+	}
+
+	for k := range cfg.IntVars {
+		b.WriteString("\t" + strcase.ToCamel(k) + " *int `json:\"" + k + ",omitempty\"`\n")
+	}
+
+	for k := range cfg.BoolVars {
+		b.WriteString("\t" + strcase.ToCamel(k) + " *bool `json:\"" + k + ",omitempty\"`\n")
+	}
+
+	b.WriteString("}\n\n")
+
 	b.WriteString("const (\n")
 	for k := range cfg.StringVars {
 		b.WriteString("\t")
 		b.WriteString(cfg.ToConstStr(k))
 		b.WriteString(" = \"")
-		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString(cfg.ToRedisKey(k))
 		b.WriteString("\"\n")
 	}
 
@@ -81,7 +99,7 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\t")
 		b.WriteString(cfg.ToConstDuration(k))
 		b.WriteString(" = \"")
-		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString(cfg.ToRedisKey(k))
 		b.WriteString("\"\n")
 	}
 
@@ -89,7 +107,7 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\t")
 		b.WriteString(cfg.ToConstInt(k))
 		b.WriteString(" = \"")
-		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString(cfg.ToRedisKey(k))
 		b.WriteString("\"\n")
 	}
 
@@ -97,7 +115,7 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\t")
 		b.WriteString(cfg.ToConstBool(k))
 		b.WriteString(" = \"")
-		b.WriteString(strcase.ToLowerCamel(k))
+		b.WriteString(cfg.ToRedisKey(k))
 		b.WriteString("\"\n")
 	}
 	b.WriteString(")\n\n")
@@ -127,10 +145,11 @@ func Gen(cfg model.Config) error {
 		fieldName := strcase.ToLowerCamel(k)
 		title := strcase.ToCamel(k)
 		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) string {\n\t")
+		b.WriteString("if c.client == nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
 		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).ToString()\n\n")
 		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
 		b.WriteString("\tc." + fieldName + " = resp\n")
-		b.WriteString("\treturn resp\n}\n")
+		b.WriteString("\treturn c." + fieldName + "\n}\n")
 
 		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value string) *DynamicConfig {\n\t")
 		b.WriteString("c." + fieldName + " = value\n\treturn c\n}\n")
@@ -144,6 +163,7 @@ func Gen(cfg model.Config) error {
 		fieldName := strcase.ToLowerCamel(k)
 		title := strcase.ToCamel(k)
 		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) time.Duration {\n\t")
+		b.WriteString("if c.client == nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
 		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).AsInt64()\n\n")
 		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
 		b.WriteString("\tc." + fieldName + " = time.Duration(resp) * time.Millisecond\n")
@@ -160,10 +180,14 @@ func Gen(cfg model.Config) error {
 		key := cfg.ToConstInt(k)
 		fieldName := strcase.ToLowerCamel(k)
 		title := strcase.ToCamel(k)
+
 		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) int {\n\t")
-		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).AsInt64()\n\n")
+		b.WriteString("if c.client == nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).ToString()\n\n")
 		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
-		b.WriteString("\tc." + fieldName + " = int(resp)\n")
+		b.WriteString("\trespInt, err := strconv.Atoi(resp)\n")
+		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("\tc." + fieldName + " = respInt\n")
 		b.WriteString("\treturn c." + fieldName + "\n}\n")
 
 		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value int) *DynamicConfig {\n\t")
@@ -178,10 +202,11 @@ func Gen(cfg model.Config) error {
 		fieldName := strcase.ToLowerCamel(k)
 		title := strcase.ToCamel(k)
 		b.WriteString("\nfunc (c *DynamicConfig) " + title + "(ctx context.Context) bool {\n\t")
-		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).AsBool()\n\n")
+		b.WriteString("if c.client == nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
+		b.WriteString("resp, err := c.client.DoCache(\n\t\tctx,\n\t\tc.client.B().Get().Key(" + key + ").Cache(),\n\t\ttime.Minute,\n\t).ToString()\n\n")
 		b.WriteString("\tif err != nil {\n\t\treturn c." + fieldName + "\n\t}\n\n")
-		b.WriteString("\tc." + fieldName + " = resp\n")
-		b.WriteString("\treturn resp\n}\n")
+		b.WriteString("\tc." + fieldName + " = resp == \"true\"\n")
+		b.WriteString("\treturn c." + fieldName + "\n}\n")
 
 		b.WriteString("\nfunc (c *DynamicConfig) Set" + title + "(value bool) *DynamicConfig {\n\t")
 		b.WriteString("c." + fieldName + " = value\n\treturn c\n}\n")
@@ -189,6 +214,33 @@ func Gen(cfg model.Config) error {
 		b.WriteString("\nfunc (c *DynamicConfig) Store" + title + "(ctx context.Context, value bool) error {\n\t")
 		b.WriteString("return c.client.Do(\n\t\tctx, \n\t\tc.client.B().Set().Key(" + key + ").\n\t\t\tValue(strconv.FormatBool(value)).\n\t\t\tBuild()).\n\t\tError()\n}\n")
 	}
+
+	b.WriteString("\nfunc (c *DynamicConfig) Update(ctx context.Context, req *RequestDynamicConfigUpdate) error {\n")
+	for k := range cfg.StringVars {
+		b.WriteString("\tif req." + strcase.ToCamel(k) + " != nil {\n")
+		b.WriteString("\t\tif err := c.Store" + strcase.ToCamel(k) + "(ctx, *req." + strcase.ToCamel(k) + "); err != nil {\n")
+		b.WriteString("\t\t\treturn err\n\t\t}\n\t}\n")
+	}
+
+	for k := range cfg.DurationVars {
+		b.WriteString("\tif req." + strcase.ToCamel(k) + " != nil {\n")
+		b.WriteString("\t\tif err := c.Store" + strcase.ToCamel(k) + "(ctx, *req." + strcase.ToCamel(k) + "); err != nil {\n")
+		b.WriteString("\t\t\treturn err\n\t\t}\n\t}\n")
+	}
+
+	for k := range cfg.IntVars {
+		b.WriteString("\tif req." + strcase.ToCamel(k) + " != nil {\n")
+		b.WriteString("\t\tif err := c.Store" + strcase.ToCamel(k) + "(ctx, *req." + strcase.ToCamel(k) + "); err != nil {\n")
+		b.WriteString("\t\t\treturn err\n\t\t}\n\t}\n")
+	}
+
+	for k := range cfg.BoolVars {
+		b.WriteString("\tif req." + strcase.ToCamel(k) + " != nil {\n")
+		b.WriteString("\t\tif err := c.Store" + strcase.ToCamel(k) + "(ctx, *req." + strcase.ToCamel(k) + "); err != nil {\n")
+		b.WriteString("\t\t\treturn err\n\t\t}\n\t}\n")
+	}
+
+	b.WriteString("\treturn nil\n}\n")
 
 	_, err = f.WriteString(b.String())
 

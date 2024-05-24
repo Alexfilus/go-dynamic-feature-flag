@@ -20,15 +20,26 @@ type DynamicConfig struct {
 	testBool2     bool
 }
 
+type RequestDynamicConfigUpdate struct {
+	TestStr1      *string        `json:"test_str1,omitempty"`
+	TestStr2      *string        `json:"test_str2,omitempty"`
+	TestDuration1 *time.Duration `json:"test_duration1,omitempty"`
+	TestDuration2 *time.Duration `json:"test_duration2,omitempty"`
+	TestInt1      *int           `json:"test_int1,omitempty"`
+	TestInt2      *int           `json:"test_int2,omitempty"`
+	TestBool1     *bool          `json:"test_bool1,omitempty"`
+	TestBool2     *bool          `json:"test_bool2,omitempty"`
+}
+
 const (
-	strKeyTestStr2           = "testStr2"
-	strKeyTestStr1           = "testStr1"
-	durationKeyTestDuration1 = "testDuration1"
-	durationKeyTestDuration2 = "testDuration2"
-	intKeyTestInt1           = "testInt1"
-	intKeyTestInt2           = "testInt2"
-	boolKeyTestBool1         = "testBool1"
-	boolKeyTestBool2         = "testBool2"
+	strKeyTestStr1           = "test-project:test:test_str1"
+	strKeyTestStr2           = "test-project:test:test_str2"
+	durationKeyTestDuration1 = "test-project:test:test_duration1"
+	durationKeyTestDuration2 = "test-project:test:test_duration2"
+	intKeyTestInt1           = "test-project:test:test_int1"
+	intKeyTestInt2           = "test-project:test:test_int2"
+	boolKeyTestBool1         = "test-project:test:test_bool1"
+	boolKeyTestBool2         = "test-project:test:test_bool2"
 )
 
 func NewDynamicConfig(client rueidis.Client) *DynamicConfig {
@@ -46,6 +57,10 @@ func NewDynamicConfig(client rueidis.Client) *DynamicConfig {
 }
 
 func (c *DynamicConfig) TestStr1(ctx context.Context) string {
+	if c.client == nil {
+		return c.testStr1
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(strKeyTestStr1).Cache(),
@@ -57,7 +72,7 @@ func (c *DynamicConfig) TestStr1(ctx context.Context) string {
 	}
 
 	c.testStr1 = resp
-	return resp
+	return c.testStr1
 }
 
 func (c *DynamicConfig) SetTestStr1(value string) *DynamicConfig {
@@ -75,6 +90,10 @@ func (c *DynamicConfig) StoreTestStr1(ctx context.Context, value string) error {
 }
 
 func (c *DynamicConfig) TestStr2(ctx context.Context) string {
+	if c.client == nil {
+		return c.testStr2
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(strKeyTestStr2).Cache(),
@@ -86,7 +105,7 @@ func (c *DynamicConfig) TestStr2(ctx context.Context) string {
 	}
 
 	c.testStr2 = resp
-	return resp
+	return c.testStr2
 }
 
 func (c *DynamicConfig) SetTestStr2(value string) *DynamicConfig {
@@ -104,6 +123,10 @@ func (c *DynamicConfig) StoreTestStr2(ctx context.Context, value string) error {
 }
 
 func (c *DynamicConfig) TestDuration1(ctx context.Context) time.Duration {
+	if c.client == nil {
+		return c.testDuration1
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(durationKeyTestDuration1).Cache(),
@@ -133,6 +156,10 @@ func (c *DynamicConfig) StoreTestDuration1(ctx context.Context, value time.Durat
 }
 
 func (c *DynamicConfig) TestDuration2(ctx context.Context) time.Duration {
+	if c.client == nil {
+		return c.testDuration2
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(durationKeyTestDuration2).Cache(),
@@ -162,17 +189,26 @@ func (c *DynamicConfig) StoreTestDuration2(ctx context.Context, value time.Durat
 }
 
 func (c *DynamicConfig) TestInt1(ctx context.Context) int {
+	if c.client == nil {
+		return c.testInt1
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(intKeyTestInt1).Cache(),
 		time.Minute,
-	).AsInt64()
+	).ToString()
 
 	if err != nil {
 		return c.testInt1
 	}
 
-	c.testInt1 = int(resp)
+	respInt, err := strconv.Atoi(resp)
+	if err != nil {
+		return c.testInt1
+	}
+
+	c.testInt1 = respInt
 	return c.testInt1
 }
 
@@ -191,17 +227,26 @@ func (c *DynamicConfig) StoreTestInt1(ctx context.Context, value int) error {
 }
 
 func (c *DynamicConfig) TestInt2(ctx context.Context) int {
+	if c.client == nil {
+		return c.testInt2
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(intKeyTestInt2).Cache(),
 		time.Minute,
-	).AsInt64()
+	).ToString()
 
 	if err != nil {
 		return c.testInt2
 	}
 
-	c.testInt2 = int(resp)
+	respInt, err := strconv.Atoi(resp)
+	if err != nil {
+		return c.testInt2
+	}
+
+	c.testInt2 = respInt
 	return c.testInt2
 }
 
@@ -220,18 +265,22 @@ func (c *DynamicConfig) StoreTestInt2(ctx context.Context, value int) error {
 }
 
 func (c *DynamicConfig) TestBool1(ctx context.Context) bool {
+	if c.client == nil {
+		return c.testBool1
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(boolKeyTestBool1).Cache(),
 		time.Minute,
-	).AsBool()
+	).ToString()
 
 	if err != nil {
 		return c.testBool1
 	}
 
-	c.testBool1 = resp
-	return resp
+	c.testBool1 = resp == "true"
+	return c.testBool1
 }
 
 func (c *DynamicConfig) SetTestBool1(value bool) *DynamicConfig {
@@ -249,18 +298,22 @@ func (c *DynamicConfig) StoreTestBool1(ctx context.Context, value bool) error {
 }
 
 func (c *DynamicConfig) TestBool2(ctx context.Context) bool {
+	if c.client == nil {
+		return c.testBool2
+	}
+
 	resp, err := c.client.DoCache(
 		ctx,
 		c.client.B().Get().Key(boolKeyTestBool2).Cache(),
 		time.Minute,
-	).AsBool()
+	).ToString()
 
 	if err != nil {
 		return c.testBool2
 	}
 
-	c.testBool2 = resp
-	return resp
+	c.testBool2 = resp == "true"
+	return c.testBool2
 }
 
 func (c *DynamicConfig) SetTestBool2(value bool) *DynamicConfig {
@@ -275,4 +328,48 @@ func (c *DynamicConfig) StoreTestBool2(ctx context.Context, value bool) error {
 			Value(strconv.FormatBool(value)).
 			Build()).
 		Error()
+}
+
+func (c *DynamicConfig) Update(ctx context.Context, req *RequestDynamicConfigUpdate) error {
+	if req.TestStr1 != nil {
+		if err := c.StoreTestStr1(ctx, *req.TestStr1); err != nil {
+			return err
+		}
+	}
+	if req.TestStr2 != nil {
+		if err := c.StoreTestStr2(ctx, *req.TestStr2); err != nil {
+			return err
+		}
+	}
+	if req.TestDuration1 != nil {
+		if err := c.StoreTestDuration1(ctx, *req.TestDuration1); err != nil {
+			return err
+		}
+	}
+	if req.TestDuration2 != nil {
+		if err := c.StoreTestDuration2(ctx, *req.TestDuration2); err != nil {
+			return err
+		}
+	}
+	if req.TestInt1 != nil {
+		if err := c.StoreTestInt1(ctx, *req.TestInt1); err != nil {
+			return err
+		}
+	}
+	if req.TestInt2 != nil {
+		if err := c.StoreTestInt2(ctx, *req.TestInt2); err != nil {
+			return err
+		}
+	}
+	if req.TestBool1 != nil {
+		if err := c.StoreTestBool1(ctx, *req.TestBool1); err != nil {
+			return err
+		}
+	}
+	if req.TestBool2 != nil {
+		if err := c.StoreTestBool2(ctx, *req.TestBool2); err != nil {
+			return err
+		}
+	}
+	return nil
 }
