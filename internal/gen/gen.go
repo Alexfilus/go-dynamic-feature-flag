@@ -257,6 +257,9 @@ func Gen(cfg model.Config) error {
         b.WriteString("\t}\n}\n")
 
 	b.WriteString("\nfunc (c *DynamicConfig) Update(ctx context.Context, req *RequestDynamicConfigUpdate) error {\n")
+	b.WriteString("\tif c.client == nil {\n")
+	b.WriteString("\t\treturn nil\n")
+	b.WriteString("\t}\n")
 	for k := range cfg.StringVars {
 		b.WriteString("\tif req." + strcase.ToCamel(k) + " != nil {\n")
 		b.WriteString("\t\tif err := c.Store" + strcase.ToCamel(k) + "(ctx, *req." + strcase.ToCamel(k) + "); err != nil {\n")

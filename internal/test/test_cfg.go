@@ -355,6 +355,9 @@ func (c *DynamicConfig) Config(ctx context.Context) ResponseDynamicConfig {
 }
 
 func (c *DynamicConfig) Update(ctx context.Context, req *RequestDynamicConfigUpdate) error {
+	if c.client == nil {
+		return nil
+	}
 	if req.TestStr1 != nil {
 		if err := c.StoreTestStr1(ctx, *req.TestStr1); err != nil {
 			return err
