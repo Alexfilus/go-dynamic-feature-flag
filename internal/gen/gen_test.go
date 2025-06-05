@@ -17,7 +17,7 @@ func TestGen(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Testcase 1",
+            name: "TestCase 1",
 			args: args{
 				cfg: model.Config{
 					ProjectName: "test-project",
@@ -45,7 +45,7 @@ func TestGen(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Testcase 2",
+            name: "TestCase 2",
 			args: args{
 				cfg: model.Config{
 					ProjectName: "mega-pay-master",
@@ -62,7 +62,7 @@ func TestGen(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Testcase 3",
+            name: "TestCase 3",
 			args: args{
 				cfg: model.Config{
 					ProjectName: "mega-pay-master",
@@ -77,7 +77,7 @@ func TestGen(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Testcase 4",
+            name: "TestCase 4",
 			args: args{
 				cfg: model.Config{
 					ProjectName: "mega-pay-master",
