@@ -1,6 +1,8 @@
 package gen
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -96,7 +98,17 @@ func TestGen(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := Gen(tt.args.cfg); (err != nil) != tt.wantErr {
 				t.Errorf("Gen() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
+
+			outputPath := filepath.Join(tt.args.cfg.PkgPath, tt.args.cfg.OutputFile)
+			if _, err := os.Stat(outputPath); err != nil {
+				t.Fatalf("generated file %s missing: %v", outputPath, err)
+			}
+
+			// cleanup generated file and directory if possible
+			_ = os.Remove(outputPath)
+			_ = os.Remove(tt.args.cfg.PkgPath)
 		})
 	}
 }
